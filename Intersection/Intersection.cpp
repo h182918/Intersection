@@ -29,17 +29,17 @@ public:
     int direction;
     HBRUSH color;
 
-    void draw(HDC hdc) {
-
-        Rectangle(hdc, left, top, right, bottom);
+    void draw(HDC* hdc) {
+        Rectangle(*hdc, left, top, right, bottom);
     }
 };
 
 void createRoad(HDC);
 void createCar();
-void paintCar(Car);
+void paintCar(Car*);
 void drawTrafficLight(HDC, int, int, int);
 void updateState();
+void moveCars();
 
 list<Car*> carList;
 
@@ -147,7 +147,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
-
+    SetTimer(hWnd, 2, 1000, 0);
     return TRUE;
 }
 
@@ -186,7 +186,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hWnd, &ps);
-        createCar();
         GetClientRect(hWnd, &rect);
         createRoad(hdc);
         drawTrafficLight(hdc, 60, 70, eastState);
@@ -195,7 +194,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         list<Car*>::iterator i;
         for (i = carList.begin(); i != carList.end(); i++) {
             HGDIOBJ hOrg = SelectObject(hdc, (*i)->color);
-            (*i)->draw(hdc);
+            if ((*i)->direction == 1) {
+                (*i)->top = rect.bottom / 2 - 40;
+                (*i)->bottom = rect.bottom / 2 - 15;
+            }
+            else {
+                (*i)->left = rect.right / 2 - 40;
+                (*i)->right = rect.right / 2 - 15;
+            }
+            (*i)->draw(&hdc);
             SelectObject(hdc, hOrg);
         }
 
@@ -204,20 +211,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     break;
     case WM_TIMER:
     {
-        updateState();
-        InvalidateRect(hWnd, NULL, FALSE);
+        switch (wParam) {
+        case 1:
+            moveCars();
+            InvalidateRect(hWnd, NULL, FALSE);
+            break;
+        case 2:
+            updateState();
+            InvalidateRect(hWnd, NULL, FALSE);
+            break;
+        }
     }
     break;
     case WM_LBUTTONDOWN:
     {
-        SetTimer(hWnd, 0, 1000, 0);
+        createCar();
+        SetTimer(hWnd, 1, 25, 0);
     }
     break;
     case WM_RBUTTONDOWN:
         KillTimer(hWnd, 0);
-        break;
-    case WM_KEYDOWN:
-        break;
     case WM_DESTROY:
 
         PostQuitMessage(0);
@@ -482,25 +495,29 @@ void updateState() {
 
 void createCar() {
     int r = rand() % 2 + 1;
-    Car car;
+    //Car newCar;
+    Car* car = new Car;
+
     if (r == 1) {
-        car.left = 0;
-        car.right = car.left + 25;
-        car.top = rect.bottom / 2 - 40;
-        car.bottom = rect.bottom / 2 - 15;
+        car->left = 0;
+        car->right = car -> left + 25;
+        car->top = rect.bottom / 2 - 40;
+        car->bottom = rect.bottom / 2 - 15;
+        car->direction = 1;
     }
     else {
-        car.left = rect.right / 2 - 40;
-        car.right = rect.right / 2 - 15;
-        car.top = 0;
-        car.bottom = car.top + 25;
+        car->left = rect.right / 2 - 40;
+        car->right = rect.right / 2 - 15;
+        car->top = 0;
+        car->bottom = car->top + 25;
+        car->direction = 2;
     }
 
     paintCar(car);
-    carList.push_back(&car);
+    carList.push_back(car);
 }
 
-void paintCar(Car car) {
+void paintCar(Car* car) {
     HBRUSH yellowBrush = CreateSolidBrush(RGB(255, 255, 0));
     HBRUSH blueBrush = CreateSolidBrush(RGB(30, 144, 255));
     HBRUSH greenBrush = CreateSolidBrush(RGB(124, 252, 0));
@@ -508,11 +525,25 @@ void paintCar(Car car) {
     HBRUSH orangeBrush = CreateSolidBrush(RGB(255, 165, 0));
     HBRUSH brushes[5] = { yellowBrush, blueBrush, greenBrush, redBrush, orangeBrush };
     int r = rand() % 5;
-    car.color = brushes[r];
+    car->color = brushes[r];
 
     for (int i = 0; i < 5; i++) {
         if (i != r) {
             DeleteObject(brushes[i]);
         }
     }   
+}
+
+void moveCars() {
+    list<Car*>::iterator i;
+    for (i = carList.begin(); i != carList.end(); i++) {
+        if ((*i)->direction == 1) {
+            (*i)->left += 2;
+            (*i)->right += 2;
+        }
+        else {
+            (*i)->top += 2;
+            (*i)->bottom += 2;
+        }
+    }
 }
