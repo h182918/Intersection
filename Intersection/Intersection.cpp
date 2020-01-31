@@ -472,20 +472,25 @@ void createRoad(HDC hdc) {
 
 void updateState() {
 
+    //South = red  &&  east = yellow
     if (eastState == 2 || eastState == 3) {
         eastState++;
         southState = 1;
     }
 
+    //South = yellow && east = red
     if (southState == 2 || southState == 3) {
         southState++;
         eastState = 1;
     }
 
+    //South = ?? && east == red 
     if (eastState == 4) {
         eastState = 1;
         southState++;
     }
+
+    //South = red && east = ??
     if (southState == 4) {
         southState = 1;
         eastState++;
@@ -537,13 +542,18 @@ void paintCar(Car* car) {
 void moveCars() {
     list<Car*>::iterator i;
     for (i = carList.begin(); i != carList.end(); i++) {
-        if ((*i)->direction == 1) {
-            (*i)->left += 2;
-            (*i)->right += 2;
+        if (((*i)->direction == 1) && (southState == 3)) {
+            if (rect.bottom / 2 - 50 < (*i) -> bottom) {
+                (*i)->left += 2;
+                (*i)->right += 2;
+            }
+
         }
-        else {
-            (*i)->top += 2;
-            (*i)->bottom += 2;
+        else if(eastState == 3){
+            if (true) {
+                (*i)->top += 2;
+                (*i)->bottom += 2;
+            }
         }
     }
 }
