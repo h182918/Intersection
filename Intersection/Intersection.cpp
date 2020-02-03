@@ -504,7 +504,7 @@ void createCar() {
     Car* car = new Car;
 
     if (r == 1) {
-        car->left = 0;
+        car->left = -30;
         car->right = car -> left + 25;
         car->top = rect.bottom / 2 - 40;
         car->bottom = rect.bottom / 2 - 15;
@@ -513,7 +513,7 @@ void createCar() {
     else {
         car->left = rect.right / 2 - 40;
         car->right = rect.right / 2 - 15;
-        car->top = 0;
+        car->top = -30;
         car->bottom = car->top + 25;
         car->direction = 2;
     }
@@ -539,21 +539,38 @@ void paintCar(Car* car) {
     }   
 }
 
-void moveCars() {
-    list<Car*>::iterator i;
-    for (i = carList.begin(); i != carList.end(); i++) {
-        if (((*i)->direction == 1) && (southState == 3)) {
-            if (rect.bottom / 2 - 50 < (*i) -> bottom) {
-                (*i)->left += 2;
-                (*i)->right += 2;
-            }
 
-        }
-        else if(eastState == 3){
-            if (true) {
-                (*i)->top += 2;
-                (*i)->bottom += 2;
+void moveCars() {
+
+    list<Car*>::iterator i;
+    //list<Car*>::iterator iprev;
+    Car* lastEast = new Car;
+    lastEast -> left = 2000;
+    Car* lastSouth = new Car;
+    lastSouth -> top = 2000;
+
+    for (i = carList.begin(); i != carList.end(); i++) {
+
+        //*iprev = (*i - 1);
+
+        //hvis x bilen får grønt lys eller hvis posisjonen ikke er (rect.right / 2 - 50) så kjører den eller hvis den allerede er inni krysset
+        if (((*i)->direction == 1)) {
+            if ((southState == 3) || ((*i)->right < rect.right / 2 - 55) || ((*i)->right > rect.right / 2 - 50)) {
+                if ((lastEast -> left) - ((*i) -> right) > 5) {
+                        (*i)->left += 2;
+                        (*i)->right += 2;
+                }
             }
+            lastEast = *i;
         }
+        else if (((*i)->direction == 2)) {
+            if ((eastState == 3) || ((*i)->bottom < rect.bottom / 2 - 55) || ((*i)->bottom > rect.bottom / 2 - 50)) {
+                if ((lastSouth->top) - ((*i)->bottom) > 5) {
+                    (*i)->top += 2;
+                    (*i)->bottom += 2;
+                } 
+            }
+            lastSouth = *i;
+        }     
     }
 }
