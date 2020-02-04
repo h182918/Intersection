@@ -19,6 +19,10 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 RECT rect;
 int eastState = 1;
 int southState = 3;
+HWND hWestSpawnRate;
+HWND hNorthSpawnRate;
+int pw = 10;
+int pn = 10;
 
 class Car {
 public:
@@ -32,14 +36,23 @@ public:
     void draw(HDC* hdc) {
         Rectangle(*hdc, left, top, right, bottom);
     }
+    ~Car();
+
+
 };
 
+Car::~Car() {
+
+}
+
 void createRoad(HDC);
-void createCar();
+void createCar(int);
 void paintCar(Car*);
 void drawTrafficLight(HDC, int, int, int);
 void updateState();
 void moveCars();
+void deleteCar(Car*);
+void clearCarList();
 
 list<Car*> carList;
 
@@ -55,6 +68,8 @@ ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK	SpawnRateDialog(HWND, UINT, WPARAM, LPARAM);
+
 
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -93,6 +108,54 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     }
 
     return (int)msg.wParam;
+}
+
+INT_PTR CALLBACK SpawnRateDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
+    UNREFERENCED_PARAMETER(lParam);
+    switch (message)
+    {
+        static HWND hEdit;
+    case WM_INITDIALOG:
+        hWestSpawnRate = CreateWindow(
+            L"EDIT",
+            L"",
+            WS_BORDER | WS_CHILD | WS_VISIBLE,
+            170, 50, 50, 20,
+            hDlg, NULL, NULL, NULL);
+
+        hNorthSpawnRate = CreateWindow(
+            L"EDIT",
+            L"",
+            WS_BORDER | WS_CHILD | WS_VISIBLE,
+            170, 30, 50, 20,
+            hDlg, NULL, NULL, NULL);
+        SetWindowTextA(hWestSpawnRate, "pw");
+        SetWindowTextA(hNorthSpawnRate, "pn");
+        hEdit = GetDlgItem(hDlg, IDC_EDIT1);
+        return (INT_PTR)TRUE;
+
+    case WM_COMMAND:
+        if (LOWORD(wParam) == IDCANCEL)
+        {
+
+            EndDialog(hDlg, LOWORD(wParam));
+            return (INT_PTR)TRUE;
+        }
+
+        if (LOWORD(wParam) == IDOK) {
+            TCHAR northRate[3];
+            TCHAR westRate[3];
+            GetWindowText(hNorthSpawnRate, northRate, 3);
+            GetWindowText(hWestSpawnRate, westRate, 3);
+
+            pn = _tstoi(northRate);
+            pw = _tstoi(westRate);
+            EndDialog(hDlg, LOWORD(wParam));
+            return (INT_PTR)TRUE;
+        }
+        break;
+    }
+    return (INT_PTR)FALSE;
 }
 
 
@@ -147,6 +210,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
+    SetTimer(hWnd, 1, 25, 0);
     SetTimer(hWnd, 2, 1000, 0);
     return TRUE;
 }
@@ -218,6 +282,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
         case 2:
             updateState();
+            if (rand() % 100 < pn) {
+                createCar(1);
+            }
+            if (rand() % 100 < pw) {
+                createCar(2);
+            }
             InvalidateRect(hWnd, NULL, FALSE);
             break;
         }
@@ -225,14 +295,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     break;
     case WM_LBUTTONDOWN:
     {
-        createCar();
-        SetTimer(hWnd, 1, 25, 0);
+        DialogBox(hInst, MAKEINTRESOURCE(IDD_DIALOG1), hWnd, SpawnRateDialog);
+        InvalidateRect(hWnd, 0, true);
     }
     break;
     case WM_RBUTTONDOWN:
-        KillTimer(hWnd, 0);
+        
     case WM_DESTROY:
-
+        KillTimer(hWnd, 1);
+        KillTimer(hWnd, 2);
+        clearCarList();
         PostQuitMessage(0);
         break;
     default:
@@ -472,25 +544,21 @@ void createRoad(HDC hdc) {
 
 void updateState() {
 
-    //South = red  &&  east = yellow
     if (eastState == 2 || eastState == 3) {
         eastState++;
         southState = 1;
     }
 
-    //South = yellow && east = red
     if (southState == 2 || southState == 3) {
         southState++;
         eastState = 1;
     }
 
-    //South = ?? && east == red 
     if (eastState == 4) {
         eastState = 1;
         southState++;
     }
 
-    //South = red && east = ??
     if (southState == 4) {
         southState = 1;
         eastState++;
@@ -498,19 +566,17 @@ void updateState() {
 
 }
 
-void createCar() {
-    int r = rand() % 2 + 1;
-    //Car newCar;
+void createCar(int i) {
     Car* car = new Car;
 
-    if (r == 1) {
+    if (i == 1) {
         car->left = -30;
         car->right = car -> left + 25;
         car->top = rect.bottom / 2 - 40;
         car->bottom = rect.bottom / 2 - 15;
         car->direction = 1;
     }
-    else {
+    else if(i == 2) {
         car->left = rect.right / 2 - 40;
         car->right = rect.right / 2 - 15;
         car->top = -30;
@@ -543,17 +609,17 @@ void paintCar(Car* car) {
 void moveCars() {
 
     list<Car*>::iterator i;
-    //list<Car*>::iterator iprev;
-    Car* lastEast = new Car;
+    
+    Car* startCar1 = new Car;
+    Car* lastEast = startCar1;
     lastEast -> left = 2000;
-    Car* lastSouth = new Car;
+
+    Car* startCar2 = new Car;
+    Car* lastSouth= startCar2;
     lastSouth -> top = 2000;
 
     for (i = carList.begin(); i != carList.end(); i++) {
 
-        //*iprev = (*i - 1);
-
-        //hvis x bilen får grønt lys eller hvis posisjonen ikke er (rect.right / 2 - 50) så kjører den eller hvis den allerede er inni krysset
         if (((*i)->direction == 1)) {
             if ((southState == 3) || ((*i)->right < rect.right / 2 - 55) || ((*i)->right > rect.right / 2 - 50)) {
                 if ((lastEast -> left) - ((*i) -> right) > 5) {
@@ -561,7 +627,17 @@ void moveCars() {
                         (*i)->right += 2;
                 }
             }
-            lastEast = *i;
+            if ((*i)->left > rect.right) {
+                lastEast = startCar1;
+                lastEast->left = 2000;
+                deleteCar(*i);
+                carList.erase(i);
+                break;
+            }
+            else {
+                lastEast = *i;
+            }
+            
         }
         else if (((*i)->direction == 2)) {
             if ((eastState == 3) || ((*i)->bottom < rect.bottom / 2 - 55) || ((*i)->bottom > rect.bottom / 2 - 50)) {
@@ -569,8 +645,34 @@ void moveCars() {
                     (*i)->top += 2;
                     (*i)->bottom += 2;
                 } 
+
             }
-            lastSouth = *i;
+            if ((*i)->top > rect.bottom) {
+                lastSouth = startCar2;
+                lastSouth->top = 2000;
+                deleteCar(*i);
+                carList.erase(i);
+                break;
+            }
+            else {
+                lastSouth = *i;
+            }
+            
         }     
+
+    }
+    delete(startCar1);
+    delete(startCar2);
+}
+
+void deleteCar(Car* car) {
+    DeleteObject(car->color);
+    delete(car);
+}
+
+void clearCarList() {
+    list<Car*>::iterator i;
+    for (i = carList.begin(); i != carList.end(); i++) {
+        deleteCar(*i);
     }
 }

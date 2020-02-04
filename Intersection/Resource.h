@@ -13,7 +13,9 @@
 #define IDI_SMALL				108
 #define IDC_INTERSECTION			109
 #define IDC_MYICON				2
+#define IDD_DIALOG1				129
 #ifndef IDC_STATIC
+#define IDC_EDIT1				1000
 #define IDC_STATIC				-1
 #endif
 // Next default values for new objects
